@@ -1,29 +1,45 @@
+import logging
 import os
 import webbrowser
+import json
 
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from splitwise import Splitwise
 
-import splitwise_invoicing.load_env
+from splitwise_invoicing.load_env import environment, get_splitwise_object
+
+logging.info(f"Environment: {environment}")
+
+app = FastAPI()
 
 
-def post_auth(oauth2_code: str, oauth2_state: str) -> None:
+@app.get("/splitwise/oauth2")
+async def read_user_item(code: str, state: str):
+    if init_state != state:
+        raise Exception(f"Initial state: \"{init_state}\" doesn't equal the returned state: \"{state}\"")
+
+    user = s.getOAuth2AccessToken(code, redirect_url)
+
+    print(json.dumps(user))
+    html_content = """
+    <html>
+        <head>
+            <title>User Authorized</title>
+        </head>
+        <body>
+            <h1>You are now authorised please close this window<h1>
+        </body>
+    </html>
+
     """
-    Function that is run from the server after the authorization call
-
-    Args:
-        oauth2_code: The code passed back from the oauth url
-        oauth2_state: The state passed back from the oauth url
-
-    Returns:
-        None
-    """
+    return HTMLResponse(content=html_content, status_code=200)
 
 
-consumer_key = os.getenv("SPLITWISE_CONSUMER_KEY")
-consumer_secret = os.getenv("SPLITWISE_CONSUMER_SECRET")
+s = get_splitwise_object()
 
-s = Splitwise(consumer_key, consumer_secret)
 redirect_url = os.getenv("SPLITWISE_REDIRECT_URL")
+url, init_state = s.getOAuth2AuthorizeURL(redirect_url)
+print(init_state)
+webbrowser.open(url)
 
-url, state = s.getOAuth2AuthorizeURL(redirect_url)
-webbrowser.open_new(url)
