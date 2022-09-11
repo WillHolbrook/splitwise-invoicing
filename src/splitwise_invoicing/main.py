@@ -10,9 +10,15 @@ from openpyxl.worksheet.worksheet import Worksheet
 from splitwise_invoicing.load_env import environment
 from splitwise_invoicing.invoice_extraction import load_hsbc_transaction_data
 
+hsbc_path = Path(os.getenv("HSBC_CREDIT_INVOICE_FILEPATH")).resolve()
+received_dates, transaction_dates, details, amounts = [], [], [], []
 
-hsbc_path = Path(os.getenv("HSBC_CREDIT_INVOICE_FILEPATH"))
-received_dates, transaction_dates, details, amounts = load_hsbc_transaction_data(hsbc_path)
+for invoice_path in sorted(hsbc_path.iterdir()):
+    result_tuple = load_hsbc_transaction_data(invoice_path)
+    received_dates += result_tuple[0]
+    transaction_dates += result_tuple[1]
+    details += result_tuple[2]
+    amounts += result_tuple[3]
 
 template_xl_path = Path("./TemplateExcel.xlsx")
 transaction_sheet_name = "Transactions"
@@ -24,6 +30,9 @@ amount_column_name = "Amount"
 exact_match_column_name = "Exact Match On Splitwise?"
 partial_match_column_name = "Partial Match on Splitwise?"
 partial_match_category_column_name = "Partial Match Category"
+group_column_name = "Splitwise Group"
+add_to_splitwise_column_name = "Add to Splitwise? (TRUE/FALSE)"
+adding_default = False
 
 date_format = NamedStyle("date_format", number_format="d mmmm yyyy")
 currency_format = NamedStyle("currency_format", number_format="£#,###.00;[Red]£-#,###.00;0.00")
@@ -32,6 +41,7 @@ logging.info(f"Environment: {environment}")
 
 template_xl: Workbook = load_workbook(template_xl_path)
 transaction_sheet: Worksheet = template_xl[transaction_sheet_name]
+config_sheet: Worksheet = template_xl[config_sheet_name]
 
 transaction_column_dict = {}
 
@@ -52,6 +62,13 @@ def write_list_to_column(sheet: Worksheet, column_index: int, values: list, form
         row_num += 1
 
 
+num_transactions = len(transaction_dates)
+default_group = config_sheet.cell(2, 1).value
+write_list_to_column(transaction_sheet, transaction_column_dict[group_column_name],
+                     [default_group] * num_transactions)
+
+write_list_to_column(transaction_sheet, transaction_column_dict[add_to_splitwise_column_name],
+                     [adding_default] * num_transactions)
 write_list_to_column(transaction_sheet, transaction_column_dict[transaction_date_column_name], transaction_dates,
                      date_format)
 write_list_to_column(transaction_sheet, transaction_column_dict[received_date_column_name], received_dates, date_format)
