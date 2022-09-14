@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, date
 from pathlib import Path
+import pandas as pd
 
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
@@ -8,7 +9,7 @@ from pdfminer.layout import LTTextContainer
 from splitwise_invoicing.load_env import environment
 
 
-def load_hsbc_transaction_data(filepath: Path) -> tuple[list[date], list[date], list[str], list[float]]:
+def load_hsbc_credit_transaction_data(filepath: Path) -> tuple[list[date], list[date], list[str], list[float]]:
     pages = []
 
     for page_layout in extract_pages(filepath):
@@ -69,16 +70,25 @@ def load_hsbc_transaction_data(filepath: Path) -> tuple[list[date], list[date], 
     return received_dates, transaction_dates, details, amounts
 
 
-# TODO Implement
 def load_hsbc_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
-    pass
+    transactions = pd.read_csv(filepath, names=["dates", "details", "amount"])
 
+    transactions["dates"] = transactions["dates"].apply(lambda x: datetime.strptime(x, "%d/%m/%Y").date())
+    transactions["amount"] = transactions["amount"].apply(lambda x: -float(str(x).replace("\"", "").replace(",", "")))
+
+    return transactions["dates"].tolist(), transactions["details"].tolist(), transactions["amount"].tolist()
 
 # TODO Implement
 def load_amex_credit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
-    pass
+    transactions = pd.read_csv(filepath)
+    print(transactions.dtypes)
+    transactions["Date"] = transactions["Date"].apply(lambda x: datetime.strptime(x, "%d/%m/%Y").date())
+    return transactions["Date"].tolist(), transactions["Description"].tolist(), transactions["Amount"].tolist()
 
-
-# TODO Implement
 def load_nationwide_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
-    pass
+    transactions = pd.read_csv(filepath, skiprows=4, encoding="windows-1252")
+    transactions["Date"] = transactions["Date"].apply(lambda x: datetime.strptime(x, "%d %b %Y").date())
+    transactions["Amount"] = transactions.apply(lambda x: float(str(x["Paid out"]).replace("£", "").replace("nan", "0")) - float(str(x["Paid in"]).replace("£", "").replace("nan", "0")), axis=1)
+    transactions["Out Details"] = transactions.apply(lambda x: f'{str(x["Transaction type"])} - {str(x["Description"])}', axis=1)
+
+    return transactions["Date"].tolist(), transactions["Out Details"].tolist(), transactions["Amount"].tolist()
