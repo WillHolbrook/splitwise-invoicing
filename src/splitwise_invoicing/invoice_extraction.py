@@ -9,7 +9,7 @@ from pdfminer.layout import LTTextContainer
 from splitwise_invoicing.load_env import environment
 
 
-def load_hsbc_credit_transaction_data(filepath: Path) -> tuple[list[date], list[date], list[str], list[float]]:
+def load_hsbc_credit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
     pages = []
 
     for page_layout in extract_pages(filepath):
@@ -54,20 +54,17 @@ def load_hsbc_credit_transaction_data(filepath: Path) -> tuple[list[date], list[
 
         page_number += 1
 
-    received_dates = sorted(received_dates, key=lambda x: (x[1], -x[2]))
     transaction_dates = sorted(transaction_dates, key=lambda x: (x[1], -x[2]))
     details = sorted(details, key=lambda x: (x[1], -x[2]))
     amounts = sorted(amounts, key=lambda x: (x[1], -x[2]))
 
-    received_dates: list[date] = [datetime.strptime(y, "%d %b %y").date() for x in received_dates for y in
-                                  x[0].strip().split("\n")]
     transaction_dates: list[date] = [datetime.strptime(y, "%d %b %y").date() for x in transaction_dates for y in
                                      x[0].strip().split("\n")]
     details: list[str] = [y.replace(")", "") for x in details for y in x[0].strip().split("\n")]
     amounts: list[float] = [-float(y[:-2]) if y.endswith("CR") else float(y) for x in amounts for y in
                             x[0].strip().split("\n")]
 
-    return received_dates, transaction_dates, details, amounts
+    return transaction_dates, details, amounts
 
 
 def load_hsbc_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
@@ -81,7 +78,6 @@ def load_hsbc_debit_transaction_data(filepath: Path) -> tuple[list[date], list[s
 # TODO Implement
 def load_amex_credit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
     transactions = pd.read_csv(filepath)
-    print(transactions.dtypes)
     transactions["Date"] = transactions["Date"].apply(lambda x: datetime.strptime(x, "%d/%m/%Y").date())
     return transactions["Date"].tolist(), transactions["Description"].tolist(), transactions["Amount"].tolist()
 

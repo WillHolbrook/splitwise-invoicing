@@ -9,17 +9,36 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from splitwise_invoicing.load_env import environment
-from splitwise_invoicing.invoice_extraction import load_hsbc_credit_transaction_data
+from splitwise_invoicing.invoice_extraction import load_hsbc_credit_transaction_data, \
+    load_amex_credit_transaction_data, load_nationwide_debit_transaction_data, load_hsbc_debit_transaction_data
 
 hsbc_path = Path(os.getenv("HSBC_CREDIT_INVOICE_FILEPATH")).resolve()
-received_dates, transaction_dates, details, amounts = [], [], [], []
+card_name_list, transaction_dates, details, amounts = [], [], [], []
+
+
+def append_tuple(
+        results_tuple: tuple[list[datetime.date], list[str], list[float]],
+        card_name: str,
+        card_name_list_p: list[str],
+        transaction_dates_p: list[datetime.date],
+        details_p: list[str],
+        amounts_p: list[float]) -> None:
+    card_name_list_p += [card_name] * len(results_tuple[0])
+    transaction_dates_p += results_tuple[0]
+    details_p += results_tuple[1]
+    amounts_p += results_tuple[2]
+
 
 for invoice_path in sorted(hsbc_path.iterdir()):
-    result_tuple = load_hsbc_credit_transaction_data(invoice_path)
-    received_dates += result_tuple[0]
-    transaction_dates += result_tuple[1]
-    details += result_tuple[2]
-    amounts += result_tuple[3]
+    append_tuple(load_hsbc_credit_transaction_data(invoice_path),
+                 "HSBC Credit", card_name_list, transaction_dates, details, amounts)
+
+append_tuple(load_amex_credit_transaction_data(Path(os.getenv("AMEX_CREDIT_INVOICE_FILEPATH"))),
+             "Amex Credit", card_name_list, transaction_dates, details, amounts)
+append_tuple(load_nationwide_debit_transaction_data(Path(os.getenv("NATIONWIDE_DEBIT_INVOICE_FILEPATH"))),
+             "Nationwide Debit", card_name_list, transaction_dates, details, amounts)
+append_tuple(load_hsbc_debit_transaction_data(Path(os.getenv("HSBC_DEBIT_INVOICE_FILEPATH"))),
+             "HSBC Debit", card_name_list, transaction_dates, details, amounts)
 
 template_xl_path = Path(os.getenv("TEMPLATE_XL_PATH"))
 transaction_sheet_name = os.getenv("TRANSACTION_SHEET_NAME")
@@ -33,6 +52,7 @@ partial_match_column_name = os.getenv("PARTIAL_MATCH_COLUMN_NAME")
 partial_match_category_column_name = os.getenv("PARTIAL_MATCH_CATEGORY_COLUMN_NAME")
 group_column_name = os.getenv("GROUP_COLUMN_NAME")
 add_to_splitwise_column_name = os.getenv("ADD_TO_SPLITWISE_COLUMN_NAME")
+card_column_name =os.getenv("CARD_COLUMN_NAME")
 adding_default = os.getenv("ADDING_DEFAULT").lower() == "true"
 ascii_uppercase_offset = 64
 
@@ -68,11 +88,13 @@ def write_list_to_column(sheet: Worksheet, column_index: int, values: list, form
 num_transactions = len(transaction_dates)
 
 default_group = config_sheet.cell(2, 1).value
+write_list_to_column(transaction_sheet, transaction_column_dict[card_column_name], card_name_list)
 write_list_to_column(transaction_sheet, transaction_column_dict[group_column_name], [default_group] * num_transactions)
 
-write_list_to_column(transaction_sheet, transaction_column_dict[add_to_splitwise_column_name], [adding_default] * num_transactions)
-write_list_to_column(transaction_sheet, transaction_column_dict[transaction_date_column_name], transaction_dates, date_format)
-write_list_to_column(transaction_sheet, transaction_column_dict[received_date_column_name], received_dates, date_format)
+write_list_to_column(transaction_sheet, transaction_column_dict[add_to_splitwise_column_name],
+                     [adding_default] * num_transactions)
+write_list_to_column(transaction_sheet, transaction_column_dict[transaction_date_column_name], transaction_dates,
+                     date_format)
 write_list_to_column(transaction_sheet, transaction_column_dict[details_column_name], details)
 write_list_to_column(transaction_sheet, transaction_column_dict[amount_column_name], amounts, currency_format)
 
