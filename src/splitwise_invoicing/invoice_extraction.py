@@ -67,3 +67,18 @@ def load_hsbc_transaction_data(filepath: Path) -> tuple[list[date], list[date], 
                             x[0].strip().split("\n")]
 
     return received_dates, transaction_dates, details, amounts
+
+
+# TODO Implement
+def load_hsbc_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
+    pass
+
+
+# TODO Implement
+def load_amex_credit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
+    pass
+
+
+# TODO Implement
+def load_nationwide_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
+    pass

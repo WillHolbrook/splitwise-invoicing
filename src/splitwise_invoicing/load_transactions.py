@@ -9,13 +9,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from splitwise_invoicing.load_env import environment
-from splitwise_invoicing.invoice_extraction import load_hsbc_transaction_data
+from splitwise_invoicing.invoice_extraction import load_hsbc_credit_transaction_data
 
 hsbc_path = Path(os.getenv("HSBC_CREDIT_INVOICE_FILEPATH")).resolve()
 received_dates, transaction_dates, details, amounts = [], [], [], []
 
 for invoice_path in sorted(hsbc_path.iterdir()):
-    result_tuple = load_hsbc_transaction_data(invoice_path)
+    result_tuple = load_hsbc_credit_transaction_data(invoice_path)
     received_dates += result_tuple[0]
     transaction_dates += result_tuple[1]
     details += result_tuple[2]
