@@ -1,0 +1,6 @@
+pdfminer.six
+splitwise
+pandas
+fastapi
+python-dotenv
+openpyxl

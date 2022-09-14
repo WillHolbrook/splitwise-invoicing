@@ -11,23 +11,15 @@ from splitwise_invoicing.load_env import get_splitwise_object
 s = get_splitwise_object()
 
 s.setOAuth2AccessToken(json.loads(os.environ.get("SPLITWISE_INVOICING_OAUTH2TOKEN_DICT")))
-groups_list: list[Group] = s.getGroups()
-
-dev_group = next((group for group in groups_list if group.name == "Development Group"), None)
-print(dev_group.__dict__)
-members_list: list[User] = dev_group.getMembers()
-for member in members_list:
-    print(member.getId())
-    print(member.getFirstName(), member.getLastName())
+transactions_df = pd.read_excel(os.getenv("INPUT_FILE_PATH"), sheet_name=os.getenv("TRANSACTION_SHEET_NAME"))
 
 
 def add_equally_split_expense(
         group: Group,
         amount: float,
         description: str,
-        splitwise_object: Splitwise,
         date: datetime | None = None,
-        details: str | None = None):
+        details: str | None = None) -> tuple[Expense, SplitwiseError]:
     if date is None:
         date = datetime.now()
     e = Expense()
@@ -38,10 +30,35 @@ def add_equally_split_expense(
     e.setSplitEqually()
     if details is not None:
         e.setDetails(details)
-    return splitwise_object.createExpense(e)
+    return s.createExpense(e)
 
 
-expense, error = add_equally_split_expense(dev_group, 10.0, "Test", s, details="big test")
-error: SplitwiseError
-if error is not None:
-    print(error.getErrors())
+def get_group_by_name(group_name: str) -> Group | None:
+    groups_list: list[Group] = s.getGroups()
+    return next((group for group in groups_list if group.name == group_name), None)
+
+
+def parse_row(row) -> None:
+    if row[os.getenv("ADD_TO_SPLITWISE_COLUMN_NAME")]:
+        print(row)
+        transaction_date = row[os.getenv("TRANSACTION_DATE_COLUMN_NAME")]
+        description = row[os.getenv("DETAILS_COLUMN_NAME")]
+        amount = row[os.getenv("AMOUNT_COLUMN_NAME")]
+        splitwise_group = get_group_by_name(row[os.getenv("GROUP_COLUMN_NAME")])
+        expense, error = add_equally_split_expense(
+            splitwise_group,
+            amount,
+            description,
+            date=transaction_date
+        )
+        error: SplitwiseError
+        if error is not None:
+            print(error.getErrors())
+
+
+transactions_df.apply(parse_row, axis=1)
+
+# expense, error = add_equally_split_expense(dev_group, 10.0, "Test", details="big test")
+# error: SplitwiseError
+# if error is not None:
+#     print(error.getErrors())
