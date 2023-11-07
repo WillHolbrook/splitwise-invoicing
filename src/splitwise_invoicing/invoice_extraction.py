@@ -1,12 +1,17 @@
 import re
 from datetime import datetime, date
+from enum import Enum
 from pathlib import Path
 import pandas as pd
 
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LTTextContainer
 
-from splitwise_invoicing.load_env import environment
+
+class Currencies(Enum):
+    CHF = "CHF"
+    GBP = "GBP"
+    EUR = "EUR"
 
 
 def load_hsbc_credit_transaction_data_old(filepath: Path) -> tuple[list[date], list[str], list[float]]:

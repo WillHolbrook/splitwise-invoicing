@@ -10,22 +10,26 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from splitwise_invoicing.load_env import environment
 from splitwise_invoicing.invoice_extraction import load_amex_credit_transaction_data, \
-    load_nationwide_debit_transaction_data, load_hsbc_transaction_data
+    load_nationwide_debit_transaction_data, load_hsbc_transaction_data, Currencies
 
-card_name_list, transaction_dates, details, amounts = [], [], [], []
+card_name_list, transaction_dates, details, amounts, currencies = [], [], [], [], []
 
 
 def append_tuple(
         results_tuple: tuple[list[datetime.date], list[str], list[float]],
         card_name: str,
+        currency: Currencies,
         card_name_list_p: list[str],
         transaction_dates_p: list[datetime.date],
         details_p: list[str],
-        amounts_p: list[float]) -> None:
+        amounts_p: list[float],
+        currencies_p: list[str]) -> None:
     """
-    Unpacks a result tuple and adds the relevant fields to the 4 lists provided
+    Unpacks a result tuple and adds the relevant fields to the 5 lists provided
 
     Args:
+        currencies_p:
+        currency:
         results_tuple: The tuple to unpack from load transactions
         card_name:
         card_name_list_p:
@@ -40,20 +44,20 @@ def append_tuple(
     transaction_dates_p += results_tuple[0]
     details_p += results_tuple[1]
     amounts_p += results_tuple[2]
+    currencies_p += [currency.value] * len(results_tuple[0])
 
 
 # Load in data from CSVs into expected format
-append_tuple(load_hsbc_transaction_data(Path(os.getenv("HSBC_CREDIT_INVOICE_FILEPATH"))),
-             "HSBC Credit", card_name_list, transaction_dates, details, amounts)
-append_tuple(load_amex_credit_transaction_data(Path(os.getenv("AMEX_CREDIT_INVOICE_FILEPATH"))),
-             "Amex Credit", card_name_list, transaction_dates, details, amounts)
-append_tuple(load_nationwide_debit_transaction_data(Path(os.getenv("NATIONWIDE_DEBIT_INVOICE_FILEPATH"))),
-             "Nationwide Debit", card_name_list, transaction_dates, details, amounts)
-append_tuple(load_hsbc_transaction_data(Path(os.getenv("HSBC_DEBIT_INVOICE_FILEPATH"))),
-             "HSBC Debit", card_name_list, transaction_dates, details, amounts)
+append_tuple(load_hsbc_transaction_data(Path("./invoices/hsbcCredit/HSBCCredit.csv")),
+             "HSBC Credit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_amex_credit_transaction_data(Path("./invoices/amexCredit/AmexCredit.csv")),
+             "Amex Credit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_nationwide_debit_transaction_data(Path("./invoices/nationwideDebit/NationwideDebit.csv")),
+             "Nationwide Debit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_hsbc_transaction_data(Path("./invoices/hsbcDebit/HSBCDebit.csv")),
+             "HSBC Debit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
 
 # Specify Excel Column names based off environment vars
-template_xl_path = Path(os.getenv("TEMPLATE_XL_PATH"))
 transaction_sheet_name = os.getenv("TRANSACTION_SHEET_NAME")
 config_sheet_name = os.getenv("CONFIG_SHEET_NAME")
 received_date_column_name = os.getenv("RECEIVED_DATE_COLUMN_NAME")
@@ -76,7 +80,7 @@ currency_format = NamedStyle("currency_format", number_format="#,###.00;[Red]-#,
 logging.info(f"Environment: {environment}")
 
 # Load in template Excel
-template_xl: Workbook = load_workbook(template_xl_path)
+template_xl: Workbook = load_workbook("./src/splitwise_invoicing/TemplateExcel.xlsx")
 transaction_sheet: Worksheet = template_xl[transaction_sheet_name]
 config_sheet: Worksheet = template_xl[config_sheet_name]
 
@@ -88,14 +92,14 @@ for column in transaction_sheet.iter_cols(1, transaction_sheet.max_column):
     column_number += 1
 
 
-def write_list_to_column(sheet: Worksheet, column_index: int, values: list, format: NamedStyle | None = None) -> None:
+def write_list_to_column(sheet: Worksheet, column_index: int, values: list, excel_format: NamedStyle | None = None) -> None:
     """Writes the content of a list to a given column index in the specified worksheet applying a style if given"""
     row_num = 2
     for value in values:
         current_cell = sheet.cell(row=row_num, column=column_index)
         current_cell.value = value
-        if format:
-            current_cell.style = format
+        if excel_format:
+            current_cell.style = excel_format
 
         row_num += 1
 
@@ -112,6 +116,7 @@ write_list_to_column(transaction_sheet, transaction_column_dict[transaction_date
                      date_format)
 write_list_to_column(transaction_sheet, transaction_column_dict[details_column_name], details)
 write_list_to_column(transaction_sheet, transaction_column_dict[amount_column_name], amounts, currency_format)
+write_list_to_column(transaction_sheet, transaction_column_dict["Currency"], currencies)
 
 # Adding data validation onto specific column
 ascii_uppercase_offset = 64
