@@ -105,3 +105,15 @@ def load_wise_transaction_data(filepath: Path) -> tuple[list[date], list[str], l
         lambda x: f'{str(x["Target name"])} - {str(x["Reference"])}' if str(x["Reference"]) != "nan" else str(x["Target name"]), axis=1)
 
     return transactions["Date"].tolist(), transactions["Out Details"].tolist(), transactions["Amount"].tolist()
+
+
+def load_revolut_debit_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
+    transactions = pd.read_csv(filepath)
+    transactions["Date"] = transactions["Started Date"].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").date())
+    transactions["Amount"] = transactions.apply(
+        lambda x: -float(str(x["Amount"])) + float(
+            str(x["Fee"])), axis=1)
+    transactions["Out Details"] = transactions.apply(
+        lambda x: f'{str(x["Type"])} - {str(x["Description"])}', axis=1)
+
+    return transactions["Date"].tolist(), transactions["Out Details"].tolist(), transactions["Amount"].tolist()
