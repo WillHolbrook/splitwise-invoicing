@@ -92,3 +92,16 @@ def load_nationwide_debit_transaction_data(filepath: Path) -> tuple[list[date], 
         lambda x: f'{str(x["Transaction type"])} - {str(x["Description"])}', axis=1)
 
     return transactions["Date"].tolist(), transactions["Out Details"].tolist(), transactions["Amount"].tolist()
+
+
+def load_wise_transaction_data(filepath: Path) -> tuple[list[date], list[str], list[float]]:
+    transactions = pd.read_csv(filepath)
+    transactions = transactions[transactions["Direction"] == "OUT"]
+    transactions = transactions[transactions["Target name"] != "William David Holbrook"]
+    transactions["Date"] = transactions["Created on"].apply(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S").date())
+    transactions["Amount"] = transactions.apply(
+        lambda x: float(x["Source amount (after fees)"]), axis=1)
+    transactions["Out Details"] = transactions.apply(
+        lambda x: f'{str(x["Target name"])} - {str(x["Reference"])}' if str(x["Reference"]) != "nan" else str(x["Target name"]), axis=1)
+
+    return transactions["Date"].tolist(), transactions["Out Details"].tolist(), transactions["Amount"].tolist()
