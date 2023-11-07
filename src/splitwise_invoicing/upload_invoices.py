@@ -56,6 +56,8 @@ def parse_row(row) -> None:
             print(error.getErrors())
 
 
+print(f"{len(transactions_df.loc[transactions_df[os.getenv('ADD_TO_SPLITWISE_COLUMN_NAME')] == True])} transactions to add")
+input("Continue?")
 transactions_df.apply(parse_row, axis=1)
 
 # expense, error = add_equally_split_expense(dev_group, 10.0, "Test", details="big test")
