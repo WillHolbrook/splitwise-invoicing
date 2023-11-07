@@ -71,7 +71,7 @@ adding_default = os.getenv("ADDING_DEFAULT").lower() == "true"
 # Specify Excel Formatting
 add_to_splitwise_data_validation = DataValidation(type="list", formula1='"TRUE,FALSE"', allow_blank=False)
 date_format = NamedStyle("date_format", number_format="d mmmm yyyy")
-currency_format = NamedStyle("currency_format", number_format="£#,###.00;[Red]£-#,###.00;0.00")
+currency_format = NamedStyle("currency_format", number_format="#,###.00;[Red]-#,###.00;0.00")
 
 logging.info(f"Environment: {environment}")
 
