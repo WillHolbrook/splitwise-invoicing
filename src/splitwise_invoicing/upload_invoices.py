@@ -6,6 +6,7 @@ from splitwise import Group, User, Expense, SplitwiseError, Splitwise
 from splitwise.user import ExpenseUser
 import pandas as pd
 
+from splitwise_invoicing.invoice_extraction import Currencies
 from splitwise_invoicing.load_env import get_splitwise_object
 
 s = get_splitwise_object()
@@ -18,8 +19,9 @@ def add_equally_split_expense(
         group: Group,
         amount: float,
         description: str,
+        currency: Currencies,
         date: datetime | None = None,
-        details: str | None = None) -> tuple[Expense, SplitwiseError]:
+        details: str | None = None,) -> tuple[Expense, SplitwiseError]:
     if date is None:
         date = datetime.now()
     e = Expense()
@@ -28,6 +30,7 @@ def add_equally_split_expense(
     e.setDescription(description)
     e.setGroupId(group.id)
     e.setSplitEqually()
+    e.setCurrencyCode(str(currency.value))
     if details is not None:
         e.setDetails(details)
     return s.createExpense(e)
@@ -45,11 +48,13 @@ def parse_row(row) -> None:
         description = row[os.getenv("DETAILS_COLUMN_NAME")]
         amount = row[os.getenv("AMOUNT_COLUMN_NAME")]
         splitwise_group = get_group_by_name(row[os.getenv("GROUP_COLUMN_NAME")])
+        currency = Currencies(row["Currency"])
         expense, error = add_equally_split_expense(
             splitwise_group,
             amount,
             description,
-            date=transaction_date
+            currency,
+            date=transaction_date,
         )
         error: SplitwiseError
         if error is not None:
@@ -59,8 +64,3 @@ def parse_row(row) -> None:
 print(f"{len(transactions_df.loc[transactions_df[os.getenv('ADD_TO_SPLITWISE_COLUMN_NAME')] == True])} transactions to add")
 input("Continue?")
 transactions_df.apply(parse_row, axis=1)
-
-# expense, error = add_equally_split_expense(dev_group, 10.0, "Test", details="big test")
-# error: SplitwiseError
-# if error is not None:
-#     print(error.getErrors())

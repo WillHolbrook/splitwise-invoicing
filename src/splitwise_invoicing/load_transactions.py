@@ -10,7 +10,8 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from splitwise_invoicing.load_env import environment
 from splitwise_invoicing.invoice_extraction import load_amex_credit_transaction_data, \
-    load_nationwide_debit_transaction_data, load_hsbc_transaction_data, Currencies
+    load_nationwide_debit_transaction_data, load_hsbc_transaction_data, Currencies, load_wise_transaction_data, \
+    load_revolut_debit_transaction_data
 
 card_name_list, transaction_dates, details, amounts, currencies = [], [], [], [], []
 
@@ -56,6 +57,18 @@ append_tuple(load_nationwide_debit_transaction_data(Path("./invoices/nationwideD
              "Nationwide Debit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
 append_tuple(load_hsbc_transaction_data(Path("./invoices/hsbcDebit/HSBCDebit.csv")),
              "HSBC Debit", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_wise_transaction_data(Path("./invoices/OtherInvoices/WiseCHF.csv")),
+             "Wise CHF", Currencies.CHF, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_wise_transaction_data(Path("./invoices/OtherInvoices/WiseEUR.csv")),
+             "Wise EUR", Currencies.EUR, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_wise_transaction_data(Path("./invoices/OtherInvoices/WiseGBP.csv")),
+             "Wise GBP", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_revolut_debit_transaction_data(Path("./invoices/OtherInvoices/RevolutCHF.csv")),
+             "Revolut CHF", Currencies.CHF, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_revolut_debit_transaction_data(Path("./invoices/OtherInvoices/RevolutEUR.csv")),
+             "Revolut EUR", Currencies.EUR, card_name_list, transaction_dates, details, amounts, currencies)
+append_tuple(load_revolut_debit_transaction_data(Path("./invoices/OtherInvoices/RevolutGBP.csv")),
+             "Revolut GBP", Currencies.GBP, card_name_list, transaction_dates, details, amounts, currencies)
 
 # Specify Excel Column names based off environment vars
 transaction_sheet_name = os.getenv("TRANSACTION_SHEET_NAME")
