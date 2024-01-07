@@ -4,3 +4,4 @@ pandas
 fastapi
 python-dotenv
 openpyxl
+uvicorn
